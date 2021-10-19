@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class MapPreview : MonoBehaviour {
 
@@ -14,8 +15,11 @@ public class MapPreview : MonoBehaviour {
 	public MeshSettings meshSettings;
 	public HeightMapSettings heightMapSettings;
 	public TextureData textureData;
+	public InstanciableData instanciablesData;
 
 	public Material terrainMaterial;
+	HeightMap heightMap;
+	List<GameObject> instances = new List<GameObject>();
 
 
 
@@ -29,7 +33,7 @@ public class MapPreview : MonoBehaviour {
 	public void DrawMapInEditor() {
 		textureData.ApplyToMaterial (terrainMaterial);
 		textureData.UpdateMeshHeights (terrainMaterial, heightMapSettings.minHeight, heightMapSettings.maxHeight);
-		HeightMap heightMap = HeightMapGenerator.GenerateHeightMap (meshSettings.numVertsPerLine, meshSettings.numVertsPerLine, heightMapSettings, Vector2.zero);
+		heightMap = HeightMapGenerator.GenerateHeightMap (meshSettings.numVertsPerLine, meshSettings.numVertsPerLine, heightMapSettings, Vector2.zero);
 
 		if (drawMode == DrawMode.NoiseMap) {
 			DrawTexture (TextureGenerator.TextureFromHeightMap (heightMap));
@@ -57,8 +61,24 @@ public class MapPreview : MonoBehaviour {
 
 		textureRender.gameObject.SetActive (false);
 		meshFilter.gameObject.SetActive (true);
+
+		InstanciateObjects(InstanciabletGenerator.InstanciateObjects(instanciablesData, heightMap, meshSettings, heightMapSettings));
 	}
 
+	void InstanciateObjects(ObjectsData[] data)
+    {
+		foreach (GameObject obj in instances) DestroyImmediate(obj);
+		for(int i = 0; i < data.Length; i++)
+        {
+			var pos = data[i].GetWorldPositions();
+			for(int j = 0; j < pos.Count; j++)
+			{
+				var instance = Instantiate(data[i].GetPrefab(), pos[j] * meshSettings.meshScale, Quaternion.identity);
+				instance.transform.SetParent(meshFilter.transform);
+				instances.Add(instance);
+			}
+        }
+    }
 
 
 	void OnValuesUpdated() {

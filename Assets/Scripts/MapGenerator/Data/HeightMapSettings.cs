@@ -22,6 +22,10 @@ public class HeightMapSettings : UpdatableData {
 			return heightMultiplier * heightCurve.Evaluate (1);
 		}
 	}
+	public float EvaluateHeight(float heightValue)
+    {
+		return heightMultiplier * heightCurve.Evaluate(heightValue);
+    }
 
 	#if UNITY_EDITOR
 

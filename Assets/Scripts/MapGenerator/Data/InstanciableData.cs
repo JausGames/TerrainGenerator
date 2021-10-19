@@ -4,7 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 
 [CreateAssetMenu()]
-public class TreeData : UpdatableData {
+public class InstanciableData : UpdatableData {
 
 	public Layer[] layers;
 
