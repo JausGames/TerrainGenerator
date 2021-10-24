@@ -22,6 +22,8 @@ public class InstanciableData : UpdatableData {
 		public float endHeight;
 		[Range(0,1)]
 		public float blendStrength;
+		public NoiseSettings noiseSettings;
+		public AnimationCurve densityCurve;
 	}
 		
 	 

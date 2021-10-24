@@ -3,7 +3,7 @@ using System.Collections;
 
 [CreateAssetMenu()]
 public class MeshSettings : UpdatableData {
-
+	public bool isWater;
 	public const int numSupportedLODs = 5;
 	public const int numSupportedChunkSizes = 9;
 	public const int numSupportedFlatshadedChunkSizes = 3;

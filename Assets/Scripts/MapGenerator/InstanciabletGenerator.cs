@@ -4,37 +4,60 @@ using UnityEngine;
 
 public static class InstanciabletGenerator
 {
-    public static ObjectsData[] InstanciateObjects(InstanciableData objets, HeightMap heightMap, MeshSettings meshSetting, HeightMapSettings heightSettings)
+    public static ObjectsData[] InstanciateObjects(InstanciableData objets, HeightMap heightMap, MeshSettings meshSetting, HeightMapSettings heightSettings, Vector2 sampleCenter)
     {
         if (objets == null) return null;
-        Debug.Log("InstanciateObjects, objects lenght = " + objets.layers.Length);
-        Debug.Log("InstanciateObjects, heightMap X lenght = " + heightMap.values.GetLength(0));
-        Debug.Log("InstanciateObjects, heightMap Y lenght = " + heightMap.values.GetLength(1));
         ObjectsData[] objsData = new ObjectsData[objets.layers.Length];
-        for(int i = 0; i < objets.layers.Length; i++)
+
+        var usedPos = new List<Vector2>();
+
+        for (int i = 0; i < objets.layers.Length; i++)
         {
+            var objMap  = Noise.GenerateNoiseMap(meshSetting.numVertsPerLine, meshSetting.numVertsPerLine, objets.layers[i].noiseSettings, sampleCenter);
+
             var objData = new ObjectsData();
             objData.SetPrefab(objets.layers[i].visual);
-            for(int x = 0; x < heightMap.values.GetLength(0); x++)
+            Vector2 topLeft = new Vector2(-1, 1) * meshSetting.meshWorldSize / 2f;
+
+            for (int x = 1; x < meshSetting.numVertsPerLine - 1; x++)
             {
-                for (int y = 0; y < heightMap.values.GetLength(1); y++)
+                for (int y = 1; y < meshSetting.numVertsPerLine - 1; y++)
                 {
-                    var factor = meshSetting.meshScale * meshSetting.chunkSizeIndex;
+                    if (!CheckValueInArray(usedPos, new Vector2(x, y)))
+                    {
+                        //var factor = 1 / Mathf.Pow(objMap[x, y] + 0.0001f, 0.8f);
+                        var factor = objets.layers[i].densityCurve.Evaluate(objMap[x, y]);
+                        var objMapValue = Mathf.CeilToInt(factor - 1f);
 
-                    Vector2 topLeft = new Vector2(-1, 1) * meshSetting.meshWorldSize / 2f;
-                    Vector2 percent = new Vector2(x - 1, y - 1) / (meshSetting.numVertsPerLine - 3);
-                    Vector2 vertexPosition2D = topLeft + new Vector2(percent.x, -percent.y) * meshSetting.meshWorldSize;
+                        Vector2 percent = new Vector2(x - 1, y - 1) / (meshSetting.numVertsPerLine - 3);
+                        Vector2 vertexPosition2D = topLeft + new Vector2(percent.x, -percent.y) * meshSetting.meshWorldSize;
 
-                    if (heightMap.values[x, y] < objets.layers[i].endHeight && heightMap.values[x, y] > objets.layers[i].startHeight)
-                        objData.AddWorldPos(vertexPosition2D.x * Vector3.right + 
-                                            heightSettings.EvaluateHeight(heightMap.values[x, y]) * Vector3.up + 
-                                            vertexPosition2D.y * Vector3.forward);
+                        if (heightMap.values[x, y] / heightSettings.heightMultiplier < objets.layers[i].endHeight
+                            && heightMap.values[x, y] / heightSettings.heightMultiplier > objets.layers[i].startHeight
+                            && x % objMapValue == 0
+                            && y % objMapValue == 0)
+                        {
+                            objData.AddWorldPos(new Vector3(vertexPosition2D.x, heightMap.values[x, y], vertexPosition2D.y) / meshSetting.meshScale);
+                            usedPos.Add(new Vector2(x, y));
+                        }
+                    }
+                
                 }
             }
             objsData[i] = objData;
         }
         return objsData;
     }
+    static private bool CheckValueInArray(List<Vector2> list, Vector2 obj)
+    {
+        for(int i = 0; i < list.Count; i++)
+        {
+            if (list[i] == obj)
+                return true;
+        }
+        return false;
+    }
+
 
 }
 public class ObjectsData
@@ -52,7 +75,6 @@ public class ObjectsData
     }
     public void AddWorldPos(Vector3 pos)
     {
-        Debug.Log("InstanciabmeGenerator, pos = " + pos);
         worldPositions.Add(pos);
     }
     public List<Vector3> GetWorldPositions()

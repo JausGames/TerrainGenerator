@@ -43,7 +43,9 @@ public static class MeshGenerator
 					int vertexIndex = vertexIndicesMap [x, y];
 					Vector2 percent = new Vector2 (x - 1, y - 1) / (numVertsPerLine - 3);
 					Vector2 vertexPosition2D = topLeft + new Vector2(percent.x,-percent.y) * meshSettings.meshWorldSize;
-					float height = heightMap [x, y];
+					//Debug.Log("MeshGenerator, vzertexPosition2D = " + vertexPosition2D);
+					var waterModifier = meshSettings.isWater ? 15f : 0f;
+					float height = heightMap [x, y] + waterModifier;
 
 					if (isEdgeConnectionVertex) {
 						bool isVertical = x == 2 || x == numVertsPerLine - 3;
@@ -53,8 +55,8 @@ public static class MeshGenerator
 
 						float heightMainVertexA = heightMap [(isVertical) ? x : x - dstToMainVertexA, (isVertical) ? y - dstToMainVertexA : y];
 						float heightMainVertexB = heightMap [(isVertical) ? x : x + dstToMainVertexB, (isVertical) ? y + dstToMainVertexB : y];
-
-						height = heightMainVertexA * (1 - dstPercentFromAToB) + heightMainVertexB * dstPercentFromAToB;
+						
+						height = heightMainVertexA * (1 - dstPercentFromAToB) + heightMainVertexB * dstPercentFromAToB + waterModifier;
 					}
 
 					meshData.AddVertex (new Vector3(vertexPosition2D.x, height, vertexPosition2D.y), percent, vertexIndex);

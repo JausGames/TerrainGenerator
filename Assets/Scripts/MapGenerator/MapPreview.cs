@@ -62,12 +62,15 @@ public class MapPreview : MonoBehaviour {
 		textureRender.gameObject.SetActive (false);
 		meshFilter.gameObject.SetActive (true);
 
-		InstanciateObjects(InstanciabletGenerator.InstanciateObjects(instanciablesData, heightMap, meshSettings, heightMapSettings));
+		InstanciateObjects(InstanciabletGenerator.InstanciateObjects(instanciablesData, heightMap, meshSettings, heightMapSettings, Vector2.zero));
 	}
 
 	void InstanciateObjects(ObjectsData[] data)
     {
-		foreach (GameObject obj in instances) DestroyImmediate(obj);
+		var go = meshFilter.gameObject;
+		if (go.GetComponentsInChildren<ObjectSetter>().Length > 0)
+			foreach (ObjectSetter obj in go.GetComponentsInChildren<ObjectSetter>()) DestroyImmediate(obj.gameObject);
+		//for (int i = 0; i < go.transform.childCount; i++) DestroyImmediate(go.transform.GetChild(i).gameObject);
 		for(int i = 0; i < data.Length; i++)
         {
 			var pos = data[i].GetWorldPositions();
@@ -75,6 +78,7 @@ public class MapPreview : MonoBehaviour {
 			{
 				var instance = Instantiate(data[i].GetPrefab(), pos[j] * meshSettings.meshScale, Quaternion.identity);
 				instance.transform.SetParent(meshFilter.transform);
+				if (instance.GetComponent<ObjectSetter>() != null) instance.GetComponent<ObjectSetter>().SetUpObject();
 				instances.Add(instance);
 			}
         }

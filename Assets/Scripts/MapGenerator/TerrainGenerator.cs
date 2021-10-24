@@ -4,6 +4,8 @@ using System.Collections.Generic;
 
 public class TerrainGenerator : MonoBehaviour {
 
+
+
 	const float viewerMoveThresholdForChunkUpdate = 25f;
 	const float sqrViewerMoveThresholdForChunkUpdate = viewerMoveThresholdForChunkUpdate * viewerMoveThresholdForChunkUpdate;
 
@@ -14,6 +16,7 @@ public class TerrainGenerator : MonoBehaviour {
 	public MeshSettings meshSettings;
 	public HeightMapSettings heightMapSettings;
 	public TextureData textureSettings;
+	public InstanciableData instanciableData;
 
 	public Transform viewer;
 	public Material mapMaterial;
@@ -71,13 +74,30 @@ public class TerrainGenerator : MonoBehaviour {
 					if (terrainChunkDictionary.ContainsKey (viewedChunkCoord)) {
 						terrainChunkDictionary [viewedChunkCoord].UpdateTerrainChunk ();
 					} else {
-						TerrainChunk newChunk = new TerrainChunk (viewedChunkCoord,heightMapSettings,meshSettings, detailLevels, colliderLODIndex, transform, viewer, mapMaterial);
+						TerrainChunk newChunk = new TerrainChunk (viewedChunkCoord,heightMapSettings,meshSettings, instanciableData, detailLevels, colliderLODIndex, transform, viewer, mapMaterial);
 						terrainChunkDictionary.Add (viewedChunkCoord, newChunk);
 						newChunk.onVisibilityChanged += OnTerrainChunkVisibilityChanged;
 						newChunk.Load ();
 					}
 				}
 
+			}
+		}
+	}
+	static public void InstanciateObjects(ObjectsData[] data, TerrainChunk chunk, List<GameObject> instances, MeshSettings meshSettings)
+	{
+		foreach (GameObject obj in instances) DestroyImmediate(obj);
+		instances.Clear();
+		var chunkOffset = (chunk.coord.x * Vector3.right + chunk.coord.y * Vector3.forward) * meshSettings.meshWorldSize;
+		for (int i = 0; i < data.Length; i++)
+		{
+			var pos = data[i].GetWorldPositions() ;
+			for (int j = 0; j < pos.Count; j++)
+			{
+				var instance = Instantiate(data[i].GetPrefab(), pos[j] * meshSettings.meshScale + chunkOffset, Quaternion.identity);
+				instance.transform.SetParent(chunk.GetMeshFilter().transform);
+				if (instance.GetComponent<ObjectSetter>() != null) instance.GetComponent<ObjectSetter>().SetUpObject();
+				instances.Add(instance);
 			}
 		}
 	}

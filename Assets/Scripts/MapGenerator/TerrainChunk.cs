@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 public class TerrainChunk {
 	
@@ -20,16 +21,23 @@ public class TerrainChunk {
 
 	HeightMap heightMap;
 	bool heightMapReceived;
+
+	List<GameObject> objectInstances = new List<GameObject>();
+	ObjectsData[] objectsData;
+	bool objectsDataReceived;
 	int previousLODIndex = -1;
 	bool hasSetCollider;
 	float maxViewDst;
 
 	HeightMapSettings heightMapSettings;
 	MeshSettings meshSettings;
+	InstanciableData instanciablesData;
 	Transform viewer;
 
-	public TerrainChunk(Vector2 coord, HeightMapSettings heightMapSettings, MeshSettings meshSettings, LODInfo[] detailLevels, int colliderLODIndex, Transform parent, Transform viewer, Material material) {
+	public TerrainChunk(Vector2 coord, HeightMapSettings heightMapSettings, MeshSettings meshSettings, InstanciableData instanciablesData, LODInfo[] detailLevels, int colliderLODIndex, Transform parent, Transform viewer, Material material) {
+		Debug.Log("Chunk coord : " + coord);
 		this.coord = coord;
+		this.instanciablesData = instanciablesData;
 		this.detailLevels = detailLevels;
 		this.colliderLODIndex = colliderLODIndex;
 		this.heightMapSettings = heightMapSettings;
@@ -66,15 +74,26 @@ public class TerrainChunk {
 
 	public void Load() {
 		ThreadedDataRequester.RequestData(() => HeightMapGenerator.GenerateHeightMap (meshSettings.numVertsPerLine, meshSettings.numVertsPerLine, heightMapSettings, sampleCentre), OnHeightMapReceived);
+		
 	}
 
-
+	public MeshFilter GetMeshFilter()
+    {
+		return meshFilter;
+    }
 
 	void OnHeightMapReceived(object heightMapObject) {
 		this.heightMap = (HeightMap)heightMapObject;
 		heightMapReceived = true;
-
+		ThreadedDataRequester.RequestData(() => InstanciabletGenerator.InstanciateObjects(instanciablesData, heightMap, meshSettings, heightMapSettings, sampleCentre), OnObjectDataReceived);
 		UpdateTerrainChunk ();
+	}
+	void OnObjectDataReceived(object intanceMapObject)
+	{
+		this.objectsData = (ObjectsData[]) intanceMapObject;
+		objectsDataReceived = true;
+
+		UpdateTerrainChunk();
 	}
 
 	Vector2 viewerPosition {
@@ -123,9 +142,48 @@ public class TerrainChunk {
 				}
 			}
 		}
+		if (objectsDataReceived)
+		{
+			float viewerDstFromNearestEdge = Mathf.Sqrt(bounds.SqrDistance(viewerPosition));
+
+			bool wasVisible = IsVisible();
+			bool visible = viewerDstFromNearestEdge <= maxViewDst;
+
+			if (visible)
+			{
+				int lodIndex = 0;
+
+				for (int i = 0; i < detailLevels.Length - 1; i++)
+				{
+					if (viewerDstFromNearestEdge > detailLevels[i].visibleDstThreshold)
+					{
+						lodIndex = i + 1;
+					}
+					else
+					{
+						break;
+					}
+				}
+
+				if (objectInstances.Count == 0)
+				TerrainGenerator.InstanciateObjects(objectsData, this, objectInstances, meshSettings);
+
+			}
+
+			if (wasVisible != visible)
+			{
+
+				SetVisible(visible);
+				if (onVisibilityChanged != null)
+				{
+					onVisibilityChanged(this, visible);
+				}
+			}
+		}
 	}
 
 	public void UpdateCollisionMesh() {
+		if (meshSettings.isWater) return;
 		if (!hasSetCollider) {
 			float sqrDstFromViewerToEdge = bounds.SqrDistance (viewerPosition);
 
