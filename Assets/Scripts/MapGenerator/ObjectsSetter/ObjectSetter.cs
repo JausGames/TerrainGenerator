@@ -16,12 +16,16 @@ public class ObjectSetter : MonoBehaviour
         {
             SetKeyFrameValue(index, Random.Range(0, 100));
         }
+        Mesh bakeMesh = new Mesh();
+        renderer.BakeMesh(bakeMesh);
+        var collider = GetComponent<MeshCollider>() != null ? GetComponent<MeshCollider>() : GetComponentInChildren<MeshCollider>();
+        if (collider != null) collider.sharedMesh = bakeMesh;
     }
     virtual protected void SetOffset()
     {
         transform.position = transform.position + Vector3.up * -0.2f
-                                + Vector3.right * Random.Range(-0.33f, 0.33f) * mapSizeFactor
-                                + Vector3.forward * Random.Range(-0.33f, 0.33f) * mapSizeFactor;
+                                + Vector3.right * Random.Range(-0.2f, 0.2f) * mapSizeFactor
+                                + Vector3.forward * Random.Range(-0.2f, 0.2f) * mapSizeFactor;
 
         transform.rotation = Quaternion.Euler(0f, Random.Range(-180f, 180f), 0f);
     }
